@@ -28,13 +28,11 @@ class _IntroScreenState extends State<IntroScreen> {
     },
   ];
 
-  Color _statusBarColor =
-      Color(0xFFEFCEAD); // Добавлено для сохранения цвета статус-бара
+  Color _statusBarColor = Color(0xFFEFCEAD);
 
   @override
   void initState() {
     super.initState();
-    // Установка начального цвета статус-бара
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
       statusBarColor: _statusBarColor,
       statusBarIconBrightness: Brightness.dark,
@@ -44,7 +42,7 @@ class _IntroScreenState extends State<IntroScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white, // Цвет фона Scaffold
+      backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
@@ -54,7 +52,7 @@ class _IntroScreenState extends State<IntroScreen> {
               onPageChanged: _onPageChanged,
               itemBuilder: (context, index) {
                 return Container(
-                  decoration: const BoxDecoration(
+                  decoration: BoxDecoration(
                     color: Color(0xFFEFCEAD),
                   ),
                   child: Stack(

@@ -13,7 +13,6 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  late IO.Socket socket;
   TextEditingController uidController = TextEditingController();
   List<String> connectedUIDs = [];
   Map<String, IO.Socket> sockets = {};
@@ -21,20 +20,6 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    connectToServer();
-  }
-
-  void connectToServer() {
-    socket = IO.io('http://62.217.182.138:3000', <String, dynamic>{
-      'transports': ['websocket'],
-      'autoConnect': false,
-    });
-    socket.connect();
-
-    // Обработка сообщения об ошибке
-    socket.on('error', (errorMessage) {
-      showErrorMessage(errorMessage);
-    });
   }
 
   Future<void> saveConnectedUIDs() async {
@@ -46,16 +31,8 @@ class _LoginPageState extends State<LoginPage> {
     setState(() {
       if (!connectedUIDs.contains(uid)) {
         connectedUIDs.add(uid);
-        IO.Socket newSocket =
-            IO.io('http://62.217.182.138:3000', <String, dynamic>{
-          'transports': ['websocket'],
-          'autoConnect': false,
-        });
-        newSocket.connect();
-        // Отправляем запрос на сервер для присоединения к комнате с соответствующим uid
-        newSocket.emit('join', uid);
-        sockets[uid] =
-            newSocket; // Сохраняем новый экземпляр сокета для данного UID
+        widget.socket.emit('join', uid);
+        sockets[uid] = widget.socket;
       }
     });
   }
@@ -87,8 +64,8 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void checkUIDExists(String uid) {
-    socket.emit('check_uid', uid);
-    socket.once('uid_check_result', (data) {
+    widget.socket.emit('check_uid', uid);
+    widget.socket.once('uid_check_result', (data) {
       bool exists = data['exists'];
       if (exists) {
         addUID(uid);
@@ -141,9 +118,8 @@ class _LoginPageState extends State<LoginPage> {
               onPressed: () {
                 String uid = uidController.text.trim();
                 if (uid.isNotEmpty) {
-                  // Проверяем, что uid не пустой
                   addUID(uid);
-                  uidController.clear(); // Здесь отправляется команда на сервер
+                  uidController.clear();
                 } else {
                   showErrorMessage('Пожалуйста, введите действительный UID');
                 }
@@ -196,14 +172,11 @@ class _LoginPageState extends State<LoginPage> {
                                       context,
                                       MaterialPageRoute(
                                         builder: (context) => TimerScreen(
-                                          socket: sockets[
-                                              uid]!, // Используйте соответствующий экземпляр сокета для данного UID
+                                          socket: sockets[uid]!,
                                           uid: uid,
                                         ),
                                       ),
-                                    ).then((_) {
-                                      // При возврате из TimerScreen ничего не делаем
-                                    });
+                                    ).then((_) {});
                                   },
                                 ),
                               ],

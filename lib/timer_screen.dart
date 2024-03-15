@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:isolate';
 import 'package:flutter_application_1/circle_progress_painter.dart';
 import 'package:flutter_application_1/countdown_timer.dart';
@@ -7,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_application_1/auth.dart';
 import 'package:flutter_application_1/process_info.dart';
 import 'package:flutter_application_1/process_screen.dart';
+import 'package:flutter_application_1/request_response.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'main.dart';
@@ -38,7 +40,6 @@ class TimerScreen extends StatefulWidget {
 
 class _TimerScreenState extends State<TimerScreen>
     with TickerProviderStateMixin {
-  late IO.Socket socket;
   int hours = 0;
   int minutes = 0;
   int seconds = 0;
@@ -95,14 +96,11 @@ class _TimerScreenState extends State<TimerScreen>
 
     widget.socket.on('connection-status', (data) {
       setState(() {
-        isSocketConnected = data['connected'];
+        isSocketConnected = data['connected'] ?? false;
       });
     });
 
-    widget.socket.on('restart-timer', (data) {
-      print('Получены данные о перезапуске таймера: $data');
-      restartTimer();
-    });
+    widget.socket.on('restart-time', (data) => restartTime(data));
 
     widget.socket.on(
       'test-completed',
@@ -151,6 +149,31 @@ class _TimerScreenState extends State<TimerScreen>
     );
   }
 
+  void restartTime(data) {
+    try {
+      final jsonData = json.decode(data);
+      final List<RequestResponse> restart = (jsonData as List)
+          .map((item) => RequestResponse.fromJson(item))
+          .toList();
+
+      if (restart.isNotEmpty) {
+        final uid = restart[0].uid;
+
+        if (uid == widget.uid) {
+          setState(() {
+            sendTimeToServer();
+          });
+        } else {
+          print('UID не соответствует');
+        }
+      } else {
+        print('Ошибка десериализации ответа');
+      }
+    } catch (e) {
+      print('Ошибка при обработке данных перезапуска: $e');
+    }
+  }
+
   @pragma("vm:entry-point")
   static Future<void> navigateToProcessInfoScreen(
       BuildContext context, List<ProcessInfo> processInfoList) async {
@@ -160,12 +183,6 @@ class _TimerScreenState extends State<TimerScreen>
         builder: (context) => ProcessInfoScreen(processInfoList),
       ),
     );
-  }
-
-  void restartTimer() {
-    setState(() {
-      sendTimeToServer();
-    });
   }
 
   Future<void> sendSubjectAndClassToServer(
@@ -210,10 +227,6 @@ class _TimerScreenState extends State<TimerScreen>
       },
     );
 
-    if (selectedSubject == null) {
-      return null;
-    }
-
     return selectedSubject;
   }
 
@@ -246,9 +259,7 @@ class _TimerScreenState extends State<TimerScreen>
         );
       },
     );
-    if (selectedClass == null) {
-      return null;
-    }
+
     return selectedClass;
   }
 
