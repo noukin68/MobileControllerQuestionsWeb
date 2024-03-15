@@ -40,6 +40,7 @@ class TimerScreen extends StatefulWidget {
 
 class _TimerScreenState extends State<TimerScreen>
     with TickerProviderStateMixin {
+  int? initialTimeInSeconds;
   int hours = 0;
   int minutes = 0;
   int seconds = 0;
@@ -72,21 +73,29 @@ class _TimerScreenState extends State<TimerScreen>
 
     widget.socket.on('process-data', (data) {
       setState(() {
-        if (data is List) {
-          TimerScreen.processInfoList = List<ProcessInfo>.from(
-            data.map((item) {
-              if (item is Map<String, dynamic>) {
-                return ProcessInfo.fromJson(item);
-              }
-            }),
-          );
-          processInfoList = List<ProcessInfo>.from(
-            data.map((item) {
-              if (item is Map<String, dynamic>) {
-                return ProcessInfo.fromJson(item);
-              }
-            }),
-          );
+        if (data != null && data['processes'] != null && data['uid'] != null) {
+          var processes = data['processes'];
+          var uid = data['uid'];
+          if (processes is List) {
+            TimerScreen.processInfoList = List<ProcessInfo>.from(
+              processes.map((item) {
+                if (item is Map<String, dynamic>) {
+                  return ProcessInfo.fromJson(item);
+                }
+              }),
+            );
+            processInfoList = List<ProcessInfo>.from(
+              processes.map((item) {
+                if (item is Map<String, dynamic>) {
+                  return ProcessInfo.fromJson(item);
+                }
+              }),
+            );
+          } else {
+            TimerScreen.processInfoList = [];
+            processInfoList = [];
+          }
+          // Теперь вы можете использовать uid по вашему усмотрению.
         } else {
           TimerScreen.processInfoList = [];
           processInfoList = [];
@@ -161,7 +170,11 @@ class _TimerScreenState extends State<TimerScreen>
 
         if (uid == widget.uid) {
           setState(() {
-            sendTimeToServer();
+            // Используем сохраненное время
+            hours = (initialTimeInSeconds! / 3600).floor();
+            minutes = ((initialTimeInSeconds! % 3600) / 60).floor();
+            seconds = initialTimeInSeconds! % 60;
+            sendTimeToServer(); // Отправляем время снова
           });
         } else {
           print('UID не соответствует');
@@ -309,6 +322,10 @@ class _TimerScreenState extends State<TimerScreen>
 
   void sendTimeToServer() {
     final totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    if (initialTimeInSeconds == null) {
+      initialTimeInSeconds =
+          totalSeconds; // Сохраняем время при первом получении
+    }
 
     print('Sending time: $hours:$minutes:$seconds');
     widget.socket.emit('time-received', {
